@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/GabrieldeFreire/multithreading/log"
@@ -12,7 +13,7 @@ import (
 )
 
 const (
-	REQUEST_MAX_DURATION = 10 * time.Second
+	REQUEST_MAX_DURATION = 1 * time.Second
 )
 
 var CEP_APIS = [...]func(cep string, reqChan chan *schema.ApiCepInfo) schema.CepInterface{
@@ -22,15 +23,11 @@ var CEP_APIS = [...]func(cep string, reqChan chan *schema.ApiCepInfo) schema.Cep
 
 var logger *slog.Logger = log.GetInstance()
 
-// "https://cdn.apicep.com/file/apicep/%s.json",
-// "http://viacep.com.br/ws/%s/json/",
-
 func main() {
-	// cep = flag.String("cep", "09530-210", "current environment")
-
 	var cep string
 	flag.StringVar(&cep, "cep", "09530-210", "Cep para busca")
 	flag.Parse()
+
 	getCep(cep)
 }
 
@@ -38,13 +35,16 @@ func getCep(cep string) {
 	respChan := make(chan *schema.ApiCepInfo)
 
 	allApiStructs := map[string]schema.CepInterface{}
+	mutex := &sync.RWMutex{}
 
 	for _, apiFunc := range CEP_APIS {
 		apiFunc := apiFunc
 		go func() {
 			apiFunc := apiFunc
 			apiStruct := apiFunc(cep, respChan)
+			mutex.Lock()
 			allApiStructs[apiStruct.Name()] = apiStruct
+			mutex.Unlock()
 			apiStruct.DoRequest()
 		}()
 	}
@@ -60,7 +60,6 @@ urlLoop:
 				logger.Error(fmt.Sprintf("%s request failed", apiCepResponse.ApiName))
 				continue
 			}
-			close(respChan)
 			for name, apiStruct := range allApiStructs {
 				if name == apiCepResponse.ApiName {
 					break

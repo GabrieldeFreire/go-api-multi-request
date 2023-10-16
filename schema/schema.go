@@ -1,12 +1,8 @@
 package schema
 
 import (
-	// "log/slog"
 	"time"
-	// "github.com/GabrieldeFreire/multithreading/log"
 )
-
-// var logger *slog.Logger = log.GetInstance()
 
 const (
 	REQUEST_MAX_DURATION = 10 * time.Second
@@ -48,7 +44,6 @@ func NewApiCep(cep, uf, localidade, bairro, logradouro, apiName string, statusOk
 }
 
 func formatCepWithDash(cep string) string {
-	// 09530210
 	if cep == "" {
 		return cep
 	}

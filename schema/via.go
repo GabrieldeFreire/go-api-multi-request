@@ -56,19 +56,12 @@ func (v *ViaCep) DoRequest() {
 	resp, err := request.DoNewRequestWithContext(v.ctx, urlCep)
 
 	if err != nil {
-		// if errors.Is(err, context.DeadlineExceeded) {
-		// 	// logger.ErrorContext(v.ctx, err.Error())
-		// } else {
-		// 	// logger.Error(err.Error())
-		// }
 		v.reqChan <- v.ToApiCep()
 	} else if resp.StatusCode != http.StatusOK {
-		// logger.Error(fmt.Sprintf("status code %d", resp.StatusCode))
 		v.reqChan <- v.ToApiCep()
 	} else {
 		err = json.NewDecoder(resp.Body).Decode(&v.Api)
 		if err != nil {
-			// logger.Error(err.Error())
 			v.reqChan <- v.ToApiCep()
 			return
 		}

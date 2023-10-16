@@ -13,14 +13,6 @@ const (
 	BrasilApiUrl = "https://brasilapi.com.br/api/cep/v1/%s"
 )
 
-// type ApiBrasilApi struct {
-// 	Cep        string `json:"code"`
-// 	Uf         string `json:"state"`
-// 	Localidade string `json:"city"`
-// 	Bairro     string `json:"district"`
-// 	Logradouro string `json:"address"`
-// }
-
 type ApiBrasilApi struct {
 	Cep        string `json:"cep"`
 	Uf         string `json:"state"`
@@ -68,19 +60,12 @@ func (v *BrasilApi) DoRequest() {
 	resp, err := request.DoNewRequestWithContext(v.ctx, urlCep)
 
 	if err != nil {
-		// if errors.Is(err, context.DeadlineExceeded) {
-		// 	// logger.ErrorContext(v.ctx, err.Error())
-		// } else {
-		// 	// logger.Error(err.Error())
-		// }
 		v.reqChan <- v.ToApiCep()
 	} else if (resp.StatusCode < http.StatusEarlyHints) || (resp.StatusCode > http.StatusMultipleChoices) {
-		// logger.Error(fmt.Sprintf("status code %d", resp.StatusCode))
 		v.reqChan <- v.ToApiCep()
 	} else {
 		err = json.NewDecoder(resp.Body).Decode(&v.Api)
 		if err != nil {
-			// logger.Error(err.Error())
 			v.reqChan <- v.ToApiCep()
 			return
 		}
