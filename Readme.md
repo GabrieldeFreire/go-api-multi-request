@@ -2,9 +2,11 @@
 
 As duas requisições serão feitas simultaneamente para as seguintes APIs:
 
-https://cdn.apicep.com/file/apicep/" + cep + ".json  "https://cdn.apicep.com/file/apicep/70040-010.json"
+"https://cdn.apicep.com/file/apicep/" + cep + ".json"    Ex: "https://cdn.apicep.com/file/apicep/70040-010.json"
 
-http://viacep.com.br/ws/" + cep + "/json/    "http://viacep.com.br/ws/70040-010/json/"
+~~http://viacep.com.br/ws/" + cep + "/json/    Ex: "http://viacep.com.br/ws/70040-010/json/"~~
+
+"https://brasilapi.com.br/api/cep/v1/" + cep     Ex:https://brasilapi.com.br/api/cep/v1/70040-010
 
 Os requisitos para este desafio são:
 

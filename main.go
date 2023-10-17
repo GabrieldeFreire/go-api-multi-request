@@ -6,14 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-	"time"
 
 	"github.com/GabrieldeFreire/multithreading/log"
 	"github.com/GabrieldeFreire/multithreading/schema"
-)
-
-const (
-	REQUEST_MAX_DURATION = 1 * time.Second
 )
 
 var CEP_APIS = [...]func(cep string, reqChan chan *schema.ApiCepInfo) schema.CepInterface{
@@ -50,12 +45,14 @@ func getCep(cep string) {
 	}
 
 	count := 0
+	deadlineExceeded := false
 	var apiCepResponse *schema.ApiCepInfo
 urlLoop:
 	for {
 		select {
 		case apiCepResponse = <-respChan:
 			count++
+			deadlineExceeded = apiCepResponse.DeadlineExceeded || deadlineExceeded
 			if !apiCepResponse.StatusOK {
 				logger.Error(fmt.Sprintf("%s request failed", apiCepResponse.ApiName))
 				continue
@@ -69,6 +66,10 @@ urlLoop:
 			break urlLoop
 		default:
 			if count == len(CEP_APIS) {
+				if deadlineExceeded {
+					fmt.Println("Deadline exceeded")
+					return
+				}
 				fmt.Println("all requests failed")
 				return
 			}

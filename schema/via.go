@@ -3,6 +3,7 @@ package schema
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -22,13 +23,14 @@ type ApiViaCep struct {
 }
 
 type ViaCep struct {
-	Api      *ApiViaCep
-	Cep      string
-	ctx      context.Context
-	cancel   context.CancelFunc
-	reqChan  chan *ApiCepInfo
-	statusOK bool
-	name     string
+	Api              *ApiViaCep
+	Cep              string
+	ctx              context.Context
+	cancel           context.CancelFunc
+	reqChan          chan *ApiCepInfo
+	statusOK         bool
+	name             string
+	DeadlineExceeded bool
 }
 
 func (v ViaCep) Name() string {
@@ -48,6 +50,7 @@ func (v *ViaCep) ToApiCep() *ApiCepInfo {
 		v.Api.Logradouro,
 		v.name,
 		v.statusOK,
+		v.DeadlineExceeded,
 	)
 }
 
@@ -56,6 +59,11 @@ func (v *ViaCep) DoRequest() {
 	resp, err := request.DoNewRequestWithContext(v.ctx, urlCep)
 
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			v.DeadlineExceeded = true
+			v.reqChan <- v.ToApiCep()
+			return
+		}
 		v.reqChan <- v.ToApiCep()
 	} else if resp.StatusCode != http.StatusOK {
 		v.reqChan <- v.ToApiCep()

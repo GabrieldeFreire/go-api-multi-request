@@ -3,6 +3,7 @@ package schema
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -22,67 +23,75 @@ type ApiBrasilApi struct {
 }
 
 type BrasilApi struct {
-	Api      *ApiBrasilApi
-	Cep      string
-	ctx      context.Context
-	cancel   context.CancelFunc
-	reqChan  chan *ApiCepInfo
-	statusOK bool
-	name     string
+	Api              *ApiBrasilApi
+	Cep              string
+	ctx              context.Context
+	cancel           context.CancelFunc
+	reqChan          chan *ApiCepInfo
+	statusOK         bool
+	name             string
+	DeadlineExceeded bool
 }
 
-func (v BrasilApi) Name() string {
-	return v.name
+func (b BrasilApi) Name() string {
+	return b.name
 }
 
-func (v BrasilApi) StatusOk() bool {
-	return v.statusOK
+func (b BrasilApi) StatusOk() bool {
+	return b.statusOK
 }
 
-func (v *BrasilApi) CancelContext() {
-	v.cancel()
+func (b *BrasilApi) CancelContext() {
+	b.cancel()
 }
 
-func (e *BrasilApi) ToApiCep() *ApiCepInfo {
+func (b *BrasilApi) ToApiCep() *ApiCepInfo {
 	return NewApiCep(
-		e.Api.Cep,
-		e.Api.Uf,
-		e.Api.Localidade,
-		e.Api.Bairro,
-		e.Api.Logradouro,
-		e.name,
-		e.statusOK,
+		b.Api.Cep,
+		b.Api.Uf,
+		b.Api.Localidade,
+		b.Api.Bairro,
+		b.Api.Logradouro,
+		b.name,
+		b.statusOK,
+		b.DeadlineExceeded,
 	)
 }
 
-func (v *BrasilApi) DoRequest() {
-	urlCep := fmt.Sprintf(BrasilApiUrl, v.Cep)
-	resp, err := request.DoNewRequestWithContext(v.ctx, urlCep)
+func (b *BrasilApi) DoRequest() {
+	urlCep := fmt.Sprintf(BrasilApiUrl, b.Cep)
+	resp, err := request.DoNewRequestWithContext(b.ctx, urlCep)
 
 	if err != nil {
-		v.reqChan <- v.ToApiCep()
-	} else if (resp.StatusCode < http.StatusEarlyHints) || (resp.StatusCode > http.StatusMultipleChoices) {
-		v.reqChan <- v.ToApiCep()
-	} else {
-		err = json.NewDecoder(resp.Body).Decode(&v.Api)
-		if err != nil {
-			v.reqChan <- v.ToApiCep()
+		if errors.Is(err, context.DeadlineExceeded) {
+			b.DeadlineExceeded = true
+			b.reqChan <- b.ToApiCep()
 			return
 		}
-		v.statusOK = true
-		v.reqChan <- v.ToApiCep()
+		b.reqChan <- b.ToApiCep()
+	} else if resp.StatusCode != http.StatusOK {
+		b.reqChan <- b.ToApiCep()
+	} else {
+		err = json.NewDecoder(resp.Body).Decode(&b.Api)
+		if err != nil {
+			b.reqChan <- b.ToApiCep()
+			return
+		}
+		b.statusOK = true
+		b.reqChan <- b.ToApiCep()
 	}
 }
 
 func NewBrasilApi(cep string, reqChan chan *ApiCepInfo) CepInterface {
 	ctx, cancel := context.WithTimeout(context.Background(), REQUEST_MAX_DURATION)
 	return &BrasilApi{
-		Api:      &ApiBrasilApi{},
-		Cep:      formatCepWithDash(cep),
-		ctx:      ctx,
-		cancel:   cancel,
-		reqChan:  reqChan,
-		statusOK: false,
-		name:     "BrasilApi",
+		Api:              &ApiBrasilApi{},
+		Cep:              formatCepWithDash(cep),
+		ctx:              ctx,
+		cancel:           cancel,
+		reqChan:          reqChan,
+		statusOK:         false,
+		name:             "BrasilApi",
+		DeadlineExceeded: false,
 	}
 }

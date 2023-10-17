@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	REQUEST_MAX_DURATION = 10 * time.Second
+	REQUEST_MAX_DURATION = 1 * time.Second
 )
 
 type CepInterface interface {
@@ -24,12 +24,13 @@ type ApiCep struct {
 }
 
 type ApiCepInfo struct {
-	Api      *ApiCep
-	ApiName  string
-	StatusOK bool
+	Api              *ApiCep
+	ApiName          string
+	StatusOK         bool
+	DeadlineExceeded bool
 }
 
-func NewApiCep(cep, uf, localidade, bairro, logradouro, apiName string, statusOk bool) *ApiCepInfo {
+func NewApiCep(cep, uf, localidade, bairro, logradouro, apiName string, statusOk, deadlineExceeded bool) *ApiCepInfo {
 	return &ApiCepInfo{
 		&ApiCep{
 			Cep:        formatCepWithDash(cep),
@@ -40,6 +41,7 @@ func NewApiCep(cep, uf, localidade, bairro, logradouro, apiName string, statusOk
 		},
 		apiName,
 		statusOk,
+		deadlineExceeded,
 	}
 }
 
